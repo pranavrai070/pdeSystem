@@ -9,6 +9,7 @@ import {
 import Carousel from "react-native-snap-carousel";
 // import { LinearGradient } from 'expo-linear-gradient';
 import PagerView from "react-native-pager-view";
+import MyCarousel from "../../components/MyCarousel";
 
 const Symptoms = [
   {
@@ -85,17 +86,11 @@ const Home = () => {
   return (
 
     <View style={styles.container}>
+
+
+
     <View>
-      <Text className=" text-xl font-bold text-center">Not Feeling Well ?</Text>
-      <Text className=" text-md text-center mb-2">
-        Get expert care for common symptoms.
-      </Text>
-      <View style={styles.illnessContainer}>
-        {renderItems()}
-        <TouchableOpacity className="mt-2" style={styles.button}>
-          <Text style={styles.buttonText}>View All Symptoms</Text>
-        </TouchableOpacity>
-      </View>
+    <MyCarousel />
     </View>
     </View>
   );
