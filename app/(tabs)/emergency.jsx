@@ -1,10 +1,11 @@
-import React, {useState, useContext,useEffect } from 'react';
+import React, {useState, useContext,useEffect,useCallback } from 'react';
 import { View ,Text,StyleSheet,TouchableOpacity,Linking,Image} from 'react-native';
 import AlertButton from '../../components/AlertButton';
 import { AuthContext } from '../../services/authContext';
 import { getPatientPendingAlert,getDoctor } from '../../services/api';
 import Map from '../../components/MapView';
 import doctorImage from '../../assets/images/doctor_image.jpg';
+import { useFocusEffect } from '@react-navigation/native';
 
 const Emergency = () => {
   const { token } = useContext(AuthContext);

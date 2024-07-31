@@ -5,11 +5,16 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  ScrollView
 } from "react-native";
 import Carousel from "react-native-snap-carousel";
 // import { LinearGradient } from 'expo-linear-gradient';
 import PagerView from "react-native-pager-view";
+import { MaterialIcons } from '@expo/vector-icons';
 import MyCarousel from "../../components/MyCarousel";
+import SearchBarComponent from "../../components/SearchBarComponent";
+import FeaturedServiceCard from "../../components/FeaturedServiceCard";
+
 
 const Symptoms = [
   {
@@ -86,12 +91,46 @@ const Home = () => {
   return (
 
     <View style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator ={false}>
+      <SearchBarComponent/>
+
+    <View className="mb-10">
+      <Text className=" text-xl font-bold text-center">Not Feeling Well ?</Text>
+      <Text className=" text-md text-center mb-2">
+        Get expert care for common symptoms.
+      </Text>
+      <View style={styles.illnessContainer}>
+        {renderItems()}
+        <TouchableOpacity className="mt-2" style={styles.button}>
+          <Text style={styles.buttonText}>View All Symptoms</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
 
 
+  <View className="flex flex-col items-center">
 
-    <View>
+  <View className="flex flex-row items-center">
+   <MaterialIcons name="star-border" size={24} color="black" />
+   <Text className="font-bold">Featured Services</Text>
+   </View>
+
+   <View className="w-full">
+    <FeaturedServiceCard/>
+   </View>
+
+  </View>
+
+   <View>
     <MyCarousel />
     </View>
+
+    <View>
+      
+    </View>
+
+    </ScrollView>
+
     </View>
   );
 };
@@ -99,8 +138,8 @@ const Home = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    // justifyContent: "center",
+    // alignItems: "center",
     margin: 5,
   },
   illnessContainer: {

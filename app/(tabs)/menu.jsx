@@ -200,8 +200,8 @@ const styles = StyleSheet.create({
         marginLeft:20
       },
       docImage: {
-        width: 80,
-        height: 80,
+        width: 70,
+        height: 70,
         borderRadius: 40
       },
 
