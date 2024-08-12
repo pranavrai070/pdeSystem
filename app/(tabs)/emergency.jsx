@@ -1,11 +1,22 @@
-import React, {useState, useContext,useEffect,useCallback } from 'react';
-import { View ,Text,StyleSheet,TouchableOpacity,Linking,Image} from 'react-native';
-import AlertButton from '../../components/AlertButton';
-import { AuthContext } from '../../services/authContext';
-import { getPatientPendingAlert,getDoctor } from '../../services/api';
-import Map from '../../components/MapView';
-import doctorImage from '../../assets/images/doctor_image.jpg';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useContext, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Linking,
+  Image,
+  ActivityIndicator
+} from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import AlertButton from "../../components/AlertButton";
+import LottieView from "lottie-react-native";
+import { AuthContext } from "../../services/authContext";
+import { getPatientPendingAlert, getDoctor } from "../../services/api";
+import Map from "../../components/MapView";
+import doctorImage from "../../assets/images/doctor_image.jpg";
+import { useFocusEffect } from "@react-navigation/native";
+import AlertList from "../../components/AlertList";
 
 const Emergency = () => {
   const { token } = useContext(AuthContext);
@@ -15,159 +26,232 @@ const Emergency = () => {
     if (doctorData.mobileNumber) {
       Linking.openURL(`tel:${doctorData.mobileNumber}`);
     } else {
-      console.log('Doctor does not have a mobile number.');
+      console.log("Doctor does not have a mobile number.");
     }
   };
 
-  const [alertPending,setAlertPending]=useState(false);
+  const [userRole, setUserRole] = useState(null);
 
-  const [doctorId,setDoctorId]=useState(null);
-
-  const [doctorData,setDoctorData]=useState([]);
-
-  const [pendingData,setPendingData]=useState([]);
-
-  const doctorCordinate=[ 28.6405155, 77.2827173 ];
-  const patientCordinate=[28.6347508,77.2198171];
-
-  const patientId="668bc1abae4ccc316dec6967";
-
-  useEffect(()=>{
-    const getPendingAlertData=async()=>{
-       try {
-        console.log("codes get here");
-        const pendingAlertData=await getPatientPendingAlert(patientId);
-        console.log("codes get here also");
-        console.log(pendingAlertData);
-        console.log("getting in depth data",pendingAlertData.alert[0].doctor);
-        if(pendingAlertData?.alert?.length!==0){
-          setAlertPending(true);
-          setPendingData(pendingAlertData?.alert[0]);
-          setDoctorId(pendingAlertData?.alert[0].doctor);
-        }
-       } catch (error) {
-        console.error('Error fetching alerts:', error);
-       }
-    };
-    getPendingAlertData();
-  },[]);
+  const [loading, setLoading] = useState(true); // State for loading
 
 
-  //to get docotor Data
-  useEffect(()=>{
-    const getAssignedDoctorData=async()=>{
+  const [alertPending, setAlertPending] = useState(false);
+
+  const [alertAccepted,setAlertAccepted]=useState(false);
+
+  const [doctorId, setDoctorId] = useState(null);
+
+  const [doctorData, setDoctorData] = useState([]);
+
+  const [acceptedData, setAcceptedData] = useState([]);
+
+  const [reload,setReload]=useState(false);
+
+  const doctorCordinate = [28.6405155, 77.2827173];
+  const patientCordinate = [28.6347508, 77.2198171];
+
+  const patientId = "668bc1abae4ccc316dec6967";
+
+  useEffect(() => {
+    // Fetch the user role from AsyncStorage when the component mounts
+    const fetchUserRole = async () => {
       try {
-       console.log("codes get here also to get docotr");
-       console.log("getting doctor id",doctorId);
-
-       const doctorData=await getDoctor(doctorId);
-       console.log(" docotro codes get here also");
-       console.log(doctorData);
-       if(doctorData?.doctor?.length!==0){
-         setDoctorData(doctorData?.doctor);
-       }
+        const role = await AsyncStorage.getItem('userRole');
+        console.log("User role fetched:", role);
+        setUserRole(role);
       } catch (error) {
-       console.error('Error fetching Docotr:', error);
+        console.error("Error fetching user role:", error);
       }
-   };
-   if(doctorId!==null){
-    getAssignedDoctorData();
-   }
-  },[doctorId]);
+    };
+
+    fetchUserRole();
+  }, []);
+
+  const fetchPendingAlertData = async () => {
+    try {
+      console.log("Fetching pending alerts", alertPending);
+      console.log("getting pending alret initial");
+      const alertData = await getPatientPendingAlert(patientId);
+      console.log(
+        "get patient pending alert data",
+        alertData?.alert[0]?.status
+      );
+
+      const findPendingOrAcceptedAlertIndex = (alerts) => {
+        return alerts.findIndex(alert => alert.status === 'pending' || alert.status === 'accepted');
+      };
+
+      const index = findPendingOrAcceptedAlertIndex(alertData.alert);
+      console.log(index); // Output: 1 (if the pending alert is the second one in the array)
+      const status = alertData?.alert[index]?.status;
+      console.log("getting type of ", typeof status);
+      if (status === "pending") {
+        console.log("code if me aa gya");
+        setAlertPending(true);
+      }
+      if (status === "accepted") {
+        console.log("code if accepted me aa gya");
+        console.log("getting doctor id to know",alertData.alert[index].doctor);
+        const doctorId = alertData.alert[index].doctor;
+        const doctorData = await getDoctor(doctorId);
+        console.log("getting doc data at last",doctorData);
+        if (doctorData?.doctor) {
+          setDoctorData(doctorData.doctor);
+        }
+        setAlertAccepted(true);
+        setAcceptedData(alertData.alert[index]);
+      }
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+    } finally {
+      setLoading(false); // End loading
+    }
+  };
 
 
+  useFocusEffect(
+    useCallback(() => {
+      // Reset state variables
+      setAlertPending(false);
+      setAlertAccepted(false);
+      setDoctorId(null);
+      setDoctorData([]);
+      setAcceptedData([]);
+      setReload(prev=>!prev);
+      setLoading(prev=>!prev);
 
+      // Fetch data
+      {userRole!=="doctor"&&fetchPendingAlertData()}
+    }, [userRole])
+  );
+
+
+  if (loading) {
+    // Show loading indicator
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    {!alertPending ? <AlertButton userId={patientId} />:<>
-    <View style={styles.container}>
-      <Map />
-      <View style={styles.doctorInfoContainer}>
-        <View style={styles.docInfo}>
-          <View style={styles.textContainer}>
-            <Text style={styles.name}>{doctorData.name}</Text>
-            <Text style={styles.email}>{doctorData.email}</Text>
-            <Text style={styles.specialty}>{doctorData.specialty}</Text>
-          </View>
-          <Image
-            style={styles.docImage}
-            source={doctorImage}
-          />
-        </View>
-        {doctorData.mobileNumber && (
-          <View style={styles.buttons}>
-            <TouchableOpacity onPress={handleCallDoctor} style={[styles.callButton]}>
-              <Text style={styles.callButtonText}>Call Doctor</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleCallDoctor} style={[styles.callButton,styles.bookRide]}>
-              <Text style={styles.callButtonText}>Book Ride</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleCallDoctor} style={[styles.callButton,styles.openMap]}>
-              <Text style={styles.callButtonText}>Open G-Map</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      {userRole==="doctor"?(
+      <View>
+        <AlertList reload={reload}/>
       </View>
-    </View>
-    </>}
-     
+      ):(<View>
+        {alertPending ? (
+        <View>
+          <LottieView
+            source={require("../../assets/animations/searching_2.json")}
+            autoPlay
+            loop
+            style={styles.animation}
+          />
+          <Text className="text-xl font-bold">Alerts sent to Nearby Doctors</Text>
+        </View>
+      ) : (
+        <>
+        {alertAccepted ? (<View style={styles.container}>
+            <Map />
+            <View style={styles.doctorInfoContainer}>
+              <View style={styles.docInfo}>
+                <View style={styles.textContainer}>
+                  <Text style={styles.name}>{doctorData.name}</Text>
+                  <Text style={styles.email}>{doctorData.email}</Text>
+                  <Text style={styles.specialty}>{doctorData.specialty}</Text>
+                </View>
+                <Image style={styles.docImage} source={doctorImage} />
+              </View>
+              {(
+                <View style={styles.buttons}>
+                  <TouchableOpacity
+                    onPress={handleCallDoctor}
+                    style={[styles.callButton]}
+                  >
+                    <Text style={styles.callButtonText}>Call Doctor</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleCallDoctor}
+                    style={[styles.callButton, styles.bookRide]}
+                  >
+                    <Text style={styles.callButtonText}>Book Ride</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleCallDoctor}
+                    style={[styles.callButton, styles.openMap]}
+                  >
+                    <Text style={styles.callButtonText}>Open G-Map</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>):(<AlertButton userId={patientId} />)}
+        </>
+      )}
+      </View>)}
     </View>
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center'
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  bookRide:{
-    backgroundColor:"green"
+  bookRide: {
+    backgroundColor: "green",
   },
-  openMap:{
-    backgroundColor:"blue"
+  animation: {
+    width: 200,
+    height: 200,
+  },
+  openMap: {
+    backgroundColor: "blue",
   },
   doctorInfoContainer: {
     padding: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 10,
-    width: '100%',
-    alignItems: 'center'
+    width: "100%",
+    alignItems: "center",
   },
   docInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
   },
   textContainer: {
     flex: 1,
-    marginRight: 10
+    marginRight: 10,
   },
   name: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10
+    fontWeight: "bold",
+    marginBottom: 10,
   },
   email: {
     fontSize: 16,
-    marginBottom: 5
+    marginBottom: 5,
   },
   specialty: {
     fontSize: 16,
-    marginBottom: 15
+    marginBottom: 15,
   },
   docImage: {
     width: 80,
     height: 80,
-    borderRadius: 40
+    borderRadius: 40,
   },
   buttons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%'
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
   callButton: {
     backgroundColor: "red",
@@ -175,14 +259,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginTop: 2,
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 1
+    alignItems: "center",
+    marginHorizontal: 1,
   },
   callButtonText: {
-    color: '#fff',
-    fontSize: 16
-  }
+    color: "#fff",
+    fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
-
 
 export default Emergency;

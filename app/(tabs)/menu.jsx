@@ -130,8 +130,10 @@ const Menu = () => {
     
       <View className="m-4">
 
-     {options.map((item)=>(
-      <Link key={item.id} href={`(menu)/${removeSpaces(item.name)}`}>
+     {options.map((item)=>{
+      if(item.name==='Logout'){
+        return (
+          <Link key={item.id} href={`/authscreen?signup=false`}>
       <View style={styles.optionContainer} key={item.id}>
           <View style={[styles.iconContainer,(item.id===10||item.id===11)?styles.dangerOption:null]}>
              {item.icon}
@@ -139,7 +141,20 @@ const Menu = () => {
           <Text style={styles.optionText}>{item.name}</Text>
         </View>
         </Link>
-     ))}
+        )
+      }else{
+       return (
+        <Link key={item.id} href={`(menu)/${removeSpaces(item.name)}`}>
+      <View style={styles.optionContainer} key={item.id}>
+          <View style={[styles.iconContainer,(item.id===10||item.id===11)?styles.dangerOption:null]}>
+             {item.icon}
+          </View>
+          <Text style={styles.optionText}>{item.name}</Text>
+        </View>
+        </Link>
+       )
+      }
+     })}
     </View>
     
     </ScrollView>

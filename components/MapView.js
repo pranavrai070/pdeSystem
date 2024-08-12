@@ -4,6 +4,7 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import customMapStyle from '../utils/customMapStyle';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { PROVIDER_GOOGLE } from "react-native-maps"
 // import { GOOGLE_MAPS_API_KEY } from '@env';
 
 const Map = () => {
@@ -48,6 +49,7 @@ const Map = () => {
         longitudeDelta,
       }}
       customMapStyle={customMapStyle}
+      provider={PROVIDER_GOOGLE}
     >
       <Marker coordinate={origin} title="Origin" />
       <Marker coordinate={destination} title="Destination" />
@@ -69,7 +71,7 @@ const windowHeight = Dimensions.get('window').height;
 const styles = StyleSheet.create({
   map: {
     width: windowWidth,
-    height:"100%"
+    height:windowHeight
   },
   overlayButton:{
     flex:1,

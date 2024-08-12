@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.15.169:7666'; 
-// const API_URL = 'http://192.168.29.211:7666'; 
+const API_URL = 'https://pdebackend.onrender.com'; 
+// const API_URL = 'http://192.168.29.211:7666';
 
 export const signupUser = async (user) => {
   try {
@@ -40,9 +40,9 @@ export const acceptAlert = async (alertId,userId) => {
   }
 };
 
-export const getAlerts = async () => {
+export const getAlerts = async (type) => {
   try {
-    const response = await axios.post(`${API_URL}/alerts/get`);
+    const response = await axios.post(`${API_URL}/alerts/get`,type);
     return response.data;
   } catch (error) {
     return { success: false, error };
@@ -61,6 +61,7 @@ export const getAlert = async (alertId) => {
 export const getDoctor = async (userId) => {
   try {
     const response = await axios.post(`${API_URL}/users/doctor`,{userId});
+    console.log("getting resposne at core for doctor data",response.data);
     return response.data;
   } catch (error) {
     return { success: false, error };

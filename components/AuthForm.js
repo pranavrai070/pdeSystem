@@ -1,36 +1,48 @@
-import React, { useState,useContext } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AuthContext } from '../services/authContext';
 import { loginUser, signupUser } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 
-const AuthForm = ({ isSignup}) => {
+const AuthForm = ({ isSignup }) => {
   const [email, setEmail] = useState('david@anymail.com');
   const [password, setPassword] = useState('Kumar@1999');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [specialty, setSpecialty] = useState('');
+  const [loading, setLoading] = useState(false); // State for loading indicator
   const { signIn } = useContext(AuthContext);
 
   const handleAuth = async () => {
-    if (isSignup) {
-      const user = { name, email, password, age, gender, role: specialty ? 'doctor' : 'patient', specialty };
-      const response = await signupUser(user);
-      console.log("resposne from server",response);
-      if (response.success) {
-        signIn(response.token, user.role);
+    setLoading(true); // Set loading to true when API call starts
+
+    try {
+      if (isSignup) {
+        const user = { name, email, password, age, gender, role: specialty ? 'doctor' : 'patient', specialty };
+        const response = await signupUser(user);
+        console.log("resposne from server", response);
+        if (response.success) {
+          signIn(response.token, user.role);
+        } else {
+          alert(response.error.message || 'Signup failed');
+        }
       } else {
-        alert(response.error.message || 'Signup failed');
+        const response = await loginUser(email, password);
+        console.log("getting response for login", response.role);
+        if (response) {
+          await AsyncStorage.setItem('userRole', response.role);
+          router.navigate('(tabs)')
+        } else {
+          alert(response.error || 'Login failed');
+        }
       }
-    } else {
-      const response = await loginUser(email, password);
-      console.log("getting response for login",response.status);
-      if (response) {
-        router.navigate('(tabs)')
-      } else {
-        alert(response.error|| 'Login failed');
-      }
+    } catch (error) {
+      console.error("Error during authentication:", error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setLoading(false); // Set loading to false when API call ends
     }
   };
 
@@ -80,10 +92,17 @@ const AuthForm = ({ isSignup}) => {
         value={password}
         onChangeText={setPassword}
       />
-      <Button
-        title={isSignup ? 'Sign Up' : 'Login'}
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleAuth}
-      />
+        disabled={loading} // Disable button when loading
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" /> // Show loader when loading
+        ) : (
+          <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text> // Show text when not loading
+        )}
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={() => navigation.navigate(isSignup ? 'SignIn' : 'SignUp')}
       >
@@ -110,6 +129,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
+  },
+  button: {
+    backgroundColor: '#459cd7',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   toggle: {
     marginTop: 20,
