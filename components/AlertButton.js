@@ -3,7 +3,7 @@ import { View, Button, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
 import { sendAlert } from '../services/api';
 
-const AlertButton = ({ userId }) => {
+const AlertButton = ({ setAlertSent,userId }) => {
   const handleAlert = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -14,6 +14,7 @@ const AlertButton = ({ userId }) => {
     let location = await Location.getCurrentPositionAsync({});
     await sendAlert(userId, [location.coords.latitude, location.coords.longitude]);
     alert('Alert sent to nearby doctors!');
+    setAlertSent(prev=>!prev);
   };
 
   return (

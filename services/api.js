@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'https://pdebackend.onrender.com'; 
-// const API_URL = 'http://192.168.29.211:7666';
+// const API_URL = 'https://pdebackend.onrender.com';
+const API_URL = 'http://192.168.15.169:7666';
 
 export const signupUser = async (user) => {
   try {

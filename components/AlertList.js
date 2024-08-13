@@ -1,23 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Dimensions } from 'react-native';
-import { getAlerts } from '../services/api';
 import { Link } from 'expo-router';
 import { distanceFormula } from '../utils/distanceFormula';
 
-const AlertList = ({ reload }) => {
-  const [alerts, setAlerts] = useState([]);
-
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        const response = await getAlerts({ type: "pending" });
-        setAlerts(response.alerts);
-      } catch (error) {
-        console.error('Error fetching alerts:', error);
-      }
-    };
-    fetchAlerts();
-  }, [reload]);
+const AlertList = ({ alerts}) => {
 
   const doctorCordinate = [28.6405155, 77.2827173];
 
@@ -41,17 +27,25 @@ const AlertList = ({ reload }) => {
 
   return (
     <View style={styles.container}>
+      {alerts.length===0?
+        <Text style={styles.text}>
+         No alerts Pending
+        </Text>
+    :
       <FlatList
         data={alerts}
         renderItem={renderAlertItem}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-      />
+      />}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  text:{
+    paddingHorizontal:100
+  },
   container: {
     flex: 1,
     paddingTop: 20,

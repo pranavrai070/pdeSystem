@@ -12,11 +12,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AlertButton from "../../components/AlertButton";
 import LottieView from "lottie-react-native";
 import { AuthContext } from "../../services/authContext";
-import { getPatientPendingAlert, getDoctor } from "../../services/api";
+import { getPatientPendingAlert, getDoctor,getAlerts } from "../../services/api";
 import Map from "../../components/MapView";
 import doctorImage from "../../assets/images/doctor_image.jpg";
 import { useFocusEffect } from "@react-navigation/native";
 import AlertList from "../../components/AlertList";
+import io from "socket.io-client";
+
+const socket = io('http://192.168.15.169:7666'); // Connect to your server
 
 const Emergency = () => {
   const { token } = useContext(AuthContext);
@@ -34,6 +37,10 @@ const Emergency = () => {
 
   const [loading, setLoading] = useState(true); // State for loading
 
+  const [alertSent,setAlertSent]=useState(false);
+
+  const [alerts,setAlerts]=useState([]);
+
 
   const [alertPending, setAlertPending] = useState(false);
 
@@ -47,13 +54,30 @@ const Emergency = () => {
 
   const [reload,setReload]=useState(false);
 
+  // const [socket, setSocket] = useState(null);
+
   const doctorCordinate = [28.6405155, 77.2827173];
   const patientCordinate = [28.6347508, 77.2198171];
 
   const patientId = "668bc1abae4ccc316dec6967";
 
+  // useEffect(() => {
+  //   // Fetch the user role from AsyncStorage when the component mounts
+  //   const fetchUserRole = async () => {
+  //     try {
+  //       const role = await AsyncStorage.getItem('userRole');
+  //       console.log("User role fetched:", role);
+  //       setUserRole(role);
+  //     } catch (error) {
+  //       console.error("Error fetching user role:", error);
+  //     }
+  //   };
+
+  //   fetchUserRole();
+  // }, []);
+
+
   useEffect(() => {
-    // Fetch the user role from AsyncStorage when the component mounts
     const fetchUserRole = async () => {
       try {
         const role = await AsyncStorage.getItem('userRole');
@@ -66,6 +90,24 @@ const Emergency = () => {
 
     fetchUserRole();
   }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const response = await getAlerts({ type: "pending" });
+      setAlerts(response.alerts);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+    }finally {
+      setLoading(false); // End loading
+    }
+  };
+
+
+
+
+
+
+
 
   const fetchPendingAlertData = async () => {
     try {
@@ -98,6 +140,7 @@ const Emergency = () => {
         if (doctorData?.doctor) {
           setDoctorData(doctorData.doctor);
         }
+        setAlertPending(false);
         setAlertAccepted(true);
         setAcceptedData(alertData.alert[index]);
       }
@@ -107,6 +150,33 @@ const Emergency = () => {
       setLoading(false); // End loading
     }
   };
+
+  useEffect(() => {
+    // // Listen for 'chat message' events
+    // socket.on('chat message', (msg) => {
+    //   setMessages((prevMessages) => [...prevMessages, msg]);
+    // });
+
+    // Listen for 'new alert' events
+    console.log("socket useEffect runs");
+    socket.on('new_alert', (alert) => {
+       console.log("new alert event triggred",alert);
+       fetchAlerts();
+    });
+    socket.on('alert_accepted', (alert) => {
+       console.log("accept alert event triggred...............................................................",alert);
+       fetchPendingAlertData();
+    });
+
+    // Clean up listeners on component unmount
+    return () => {
+      socket.off('new_alert');
+      socket.off('alert_accepted');
+    };
+  }, []);
+
+
+  
 
 
   useFocusEffect(
@@ -121,8 +191,8 @@ const Emergency = () => {
       setLoading(prev=>!prev);
 
       // Fetch data
-      {userRole!=="doctor"&&fetchPendingAlertData()}
-    }, [userRole])
+      {userRole!=="doctor"?fetchPendingAlertData():fetchAlerts()}
+    }, [userRole,alertSent])
   );
 
 
@@ -134,67 +204,65 @@ const Emergency = () => {
         <Text>Loading...</Text>
       </View>
     );
-  }
-
-  return (
+  }else return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      {userRole==="doctor"?(
-      <View>
-        <AlertList reload={reload}/>
-      </View>
-      ):(<View>
-        {alertPending ? (
-        <View>
-          <LottieView
-            source={require("../../assets/animations/searching_2.json")}
-            autoPlay
-            loop
-            style={styles.animation}
-          />
-          <Text className="text-xl font-bold">Alerts sent to Nearby Doctors</Text>
-        </View>
-      ) : (
-        <>
-        {alertAccepted ? (<View style={styles.container}>
-            <Map />
-            <View style={styles.doctorInfoContainer}>
-              <View style={styles.docInfo}>
-                <View style={styles.textContainer}>
-                  <Text style={styles.name}>{doctorData.name}</Text>
-                  <Text style={styles.email}>{doctorData.email}</Text>
-                  <Text style={styles.specialty}>{doctorData.specialty}</Text>
-                </View>
-                <Image style={styles.docImage} source={doctorImage} />
-              </View>
-              {(
-                <View style={styles.buttons}>
-                  <TouchableOpacity
-                    onPress={handleCallDoctor}
-                    style={[styles.callButton]}
-                  >
-                    <Text style={styles.callButtonText}>Call Doctor</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleCallDoctor}
-                    style={[styles.callButton, styles.bookRide]}
-                  >
-                    <Text style={styles.callButtonText}>Book Ride</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleCallDoctor}
-                    style={[styles.callButton, styles.openMap]}
-                  >
-                    <Text style={styles.callButtonText}>Open G-Map</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>):(<AlertButton userId={patientId} />)}
-        </>
-      )}
-      </View>)}
+    {userRole==="doctor"?(
+    <View>
+      <AlertList alerts={alerts}/>
     </View>
-  );
+    ):(<View>
+      {alertPending ? (
+      <View>
+        <LottieView
+          source={require("../../assets/animations/searching_2.json")}
+          autoPlay
+          loop
+          style={styles.animation}
+        />
+        <Text className="text-xl font-bold">Alerts sent to Nearby Doctors</Text>
+      </View>
+    ) : (
+      <>
+      {alertAccepted ? (<View style={styles.container}>
+          <Map />
+          <View style={styles.doctorInfoContainer}>
+            <View style={styles.docInfo}>
+              <View style={styles.textContainer}>
+                <Text style={styles.name}>{doctorData.name}</Text>
+                <Text style={styles.email}>{doctorData.email}</Text>
+                <Text style={styles.specialty}>{doctorData.specialty}</Text>
+              </View>
+              <Image style={styles.docImage} source={doctorImage} />
+            </View>
+            {(
+              <View style={styles.buttons}>
+                <TouchableOpacity
+                  onPress={handleCallDoctor}
+                  style={[styles.callButton]}
+                >
+                  <Text style={styles.callButtonText}>Call Doctor</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleCallDoctor}
+                  style={[styles.callButton, styles.bookRide]}
+                >
+                  <Text style={styles.callButtonText}>Book Ride</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleCallDoctor}
+                  style={[styles.callButton, styles.openMap]}
+                >
+                  <Text style={styles.callButtonText}>Open G-Map</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>):(<AlertButton setAlertSent={setAlertSent} userId={patientId} />)}
+      </>
+    )}
+    </View>)}
+  </View>
+  )
 };
 
 const styles = StyleSheet.create({
